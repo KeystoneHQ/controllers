@@ -33,6 +33,7 @@ const privates = new WeakMap();
 export enum KeyringTypes {
   simple = 'Simple Key Pair',
   hd = 'HD Key Tree',
+  qr = 'QR Hardware Wallet Device',
 }
 
 /**
@@ -576,6 +577,77 @@ export class KeyringController extends BaseController<
     );
     this.update({ keyrings: [...keyrings] });
     return privates.get(this).keyring.fullUpdate();
+  }
+
+  // QR Hardware related methods
+
+  /**
+   * Add qr hardware keyring.
+   *
+   * @returns The added keyring
+   */
+  private addQRKeyring() {
+    return privates.get(this).keyring.addNewKeyring(KeyringTypes.qr);
+  }
+
+  /**
+   * Get qr hardware keyring.
+   *
+   * @returns The added keyring
+   */
+  private getQRKeyring() {
+    const keyring = privates
+      .get(this)
+      .keyring.getKeyringsByType(KeyringTypes.qr)[0];
+    if (keyring) {
+      return keyring;
+    }
+    return this.addQRKeyring();
+  }
+
+  readQRKeyring = this.getQRKeyring().readKeyring;
+
+  submitQRCryptoHDKey = this.getQRKeyring().submitCryptoHDKey;
+
+  // eslint-disable-next-line node/no-sync
+  cancelReadQRKeyring = this.getQRKeyring().cancelSync;
+
+  submitQRKeyring = this.getQRKeyring().syncKeyring;
+
+  submitQRHardwareSignature = this.getQRKeyring().submitSignature;
+
+  cancelQRHardwareSignRequest = this.getQRKeyring().cancelSignRequest;
+
+  connectQRHardware = async (page: number) => {
+    const keyring = this.getQRKeyring();
+    let accounts = [];
+    switch (page) {
+      case -1:
+        accounts = await keyring.getPreviousPage();
+        break;
+      case 1:
+        accounts = await keyring.getNextPage();
+        break;
+      default:
+        accounts = await keyring.getFirstPage();
+    }
+    return accounts;
+  };
+
+  async unlockQRHardwareWalletAccount(index: number) {
+    const keyring = await this.getQRKeyring();
+
+    keyring.setAccountToUnlock(index);
+    const oldAccounts = await privates.get(this).keyring.getAccounts();
+    await privates.get(this).keyring.addNewAccount(keyring);
+    const newAccounts = await privates.get(this).keyring.getAccounts();
+    this.updateIdentities(newAccounts);
+    newAccounts.forEach((selectedAddress: string) => {
+      if (!oldAccounts.includes(selectedAddress)) {
+        this.setSelectedAddress(selectedAddress);
+      }
+    });
+    return this.fullUpdate();
   }
 }
 
