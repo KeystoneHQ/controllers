@@ -511,10 +511,6 @@ describe('KeyringController', () => {
       return new ETHSignature(rlpSignatureData, Buffer.from(idBuffer));
     };
 
-    Object.defineProperty(uuid, 'v4', {
-      value: () => '9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d',
-    });
-
     let signProcessKeyringController: KeyringController;
     preferences = new PreferencesController();
 
@@ -563,6 +559,11 @@ describe('KeyringController', () => {
           'readCryptoHDKeyOrCryptoAccount',
         );
       }
+    });
+
+    afterEach(() => {
+      readAccountSub.reset();
+      requestSignatureStub.reset();
     });
 
     it('should setup QR keyring with crypto-hdkey', async () => {
